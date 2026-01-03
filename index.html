@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Tracker - Auto Sync</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1a1f2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 60px;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        .header { text-align: center; margin-bottom: 40px; }
+        .logo { font-size: 48px; margin-bottom: 20px; }
+        h1 { color: white; font-size: 28px; margin-bottom: 10px; }
+        .subtitle { color: #a0a0a0; font-size: 14px; }
+        .form-group { margin-bottom: 20px; }
+        label { color: #e0e0e0; font-size: 14px; font-weight: 500; display: block; margin-bottom: 8px; }
+        input { 
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        input:focus { outline: none; border-color: #00d4ff; background: rgba(255, 255, 255, 0.1); }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0, 212, 255, 0.3); }
+        button:active { transform: translateY(0); }
+        .toggle-form { text-align: center; margin-top: 20px; color: #a0a0a0; font-size: 14px; }
+        .toggle-form a { color: #00d4ff; text-decoration: none; cursor: pointer; }
+        .toggle-form a:hover { text-decoration: underline; }
+        .message { margin-top: 15px; padding: 12px; border-radius: 8px; text-align: center; font-size: 14px; }
+        .success { background: rgba(76, 175, 80, 0.2); color: #4caf50; border: 1px solid #4caf50; }
+        .error { background: rgba(244, 67, 54, 0.2); color: #f44336; border: 1px solid #f44336; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">💰</div>
+            <h1>Finance Tracker</h1>
+            <p class="subtitle">Sign in with your email and password.</p>
+        </div>
+
+        <div id="loginForm">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="you@example.com" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            <button onclick="handleSignIn()">Sign In</button>
+            <div class="toggle-form">Don't have an account? <a onclick="toggleForm()">Create one</a></div>
+            <div id="loginMessage" class="message hidden"></div>
+        </div>
+
+        <div id="signupForm" class="hidden">
+            <div class="form-group">
+                <label for="signupEmail">Email Address</label>
+                <input type="email" id="signupEmail" placeholder="you@example.com" required>
+            </div>
+            <div class="form-group">
+                <label for="signupPassword">Password</label>
+                <input type="password" id="signupPassword" placeholder="At least 6 characters" required>
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" placeholder="••••••••" required>
+            </div>
+            <button onclick="handleSignUp()">Create Account</button>
+            <div class="toggle-form">Already have an account? <a onclick="toggleForm()">Sign in</a></div>
+            <div id="signupMessage" class="message hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://egzgbwialihaawyounvs.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_vGiOElTPtrawn8zUsp1O2w_NnvSDift';
+
+        async function handleSignIn() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('loginMessage');
+
+            if (!email || !password) {
+                showMessage(messageDiv, 'Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.access_token) {
+                    localStorage.setItem('session', JSON.stringify(data));
+                    showMessage(messageDiv, '✓ Logged in successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html';
+                    }, 1500);
+                } else {
+                    showMessage(messageDiv, data.error_description || 'Invalid email or password', 'error');
+                }
+            } catch (error) {
+                showMessage(messageDiv, 'Error: ' + error.message, 'error');
+            }
+        }
+
+        async function handleSignUp() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const messageDiv = document.getElementById('signupMessage');
+
+            if (!email || !password || !confirmPassword) {
+                showMessage(messageDiv, 'Please fill in all fields', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showMessage(messageDiv, 'Passwords do not match', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showMessage(messageDiv, 'Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(messageDiv, '✓ Account created! You can now sign in.', 'success');
+                    setTimeout(() => toggleForm(), 1500);
+                } else {
+                    showMessage(messageDiv, data.error_description || 'Error creating account', 'error');
+                }
+            } catch (error) {
+                showMessage(messageDiv, 'Error: ' + error.message, 'error');
+            }
+        }
+
+        function toggleForm() {
+            document.getElementById('loginForm').classList.toggle('hidden');
+            document.getElementById('signupForm').classList.toggle('hidden');
+            document.getElementById('loginMessage').classList.add('hidden');
+            document.getElementById('signupMessage').classList.add('hidden');
+        }
+
+        function showMessage(element, message, type) {
+            element.textContent = message;
+            element.className = `message ${type}`;
+        }
+
+        // Check if already logged in
+        window.addEventListener('load', () => {
+            const session = localStorage.getItem('session');
+            if (session) {
+                window.location.href = '/dashboard.html';
+            }
+        });
+    </script>
+</body>
+</html>
